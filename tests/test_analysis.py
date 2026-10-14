@@ -173,3 +173,31 @@ def test_suspiciously_cheap(cfg):
     a = analyze(make(description=GOOD, rent=6000), cfg, today=TODAY)
     assert a.verdict == "orange"
     assert any("arnaque" in r for r in a.reasons)
+
+
+# --- Ajouts après le premier passage sur de vraies annonces ---------------------------
+
+
+@pytest.mark.parametrize("text", [
+    "Gennemgående 3-værelses i stueplan med terrasse", "Lys og gennemgående lejlighed",
+])
+def test_traversant_gennemgaaende(text):
+    assert extract_facts(make(description=text), TODAY).traversant
+
+
+def test_gennemgaaende_other_meaning_not_traversant():
+    text = "Materialevalget er gennemgående – pænt at se på"
+    assert not extract_facts(make(description=text), TODAY).traversant
+
+
+@pytest.mark.parametrize("text", ["Max 2 CPR can be registered.", "CPR can be registered at the address"])
+def test_domicile_cpr_registered(text):
+    assert extract_facts(make(description=text), TODAY).domicile_allowed is True
+
+
+def test_move_in_disabled(cfg):
+    cfg.raw["move_in"]["enabled"] = False
+    for d in ("2026-11-01", "2027-06-01"):
+        a = analyze(make(available_from=date.fromisoformat(d), furnished=True, floor=3), cfg, today=TODAY)
+        assert not any("entrée" in r for r in a.reasons)
+        assert "date d'entrée" not in a.checks

@@ -66,12 +66,19 @@ class Config:
         return self.raw["listing"]
 
     @property
-    def move_in_earliest(self) -> date:
-        return _as_date(self.raw["move_in"]["earliest"])
+    def move_in_earliest(self) -> date | None:
+        return self._move_in("earliest")
 
     @property
-    def move_in_latest(self) -> date:
-        return _as_date(self.raw["move_in"]["latest"])
+    def move_in_latest(self) -> date | None:
+        return self._move_in("latest")
+
+    def _move_in(self, key: str) -> date | None:
+        """None quand le critère est désactivé (enabled: false) ou la borne absente."""
+        m = self.section("move_in")
+        if not m.get("enabled", True) or m.get(key) is None:
+            return None
+        return _as_date(m[key])
 
     @property
     def notify(self) -> dict[str, Any]:

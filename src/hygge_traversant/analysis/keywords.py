@@ -70,12 +70,13 @@ DOMICILE_YES = [
     r"folkeregisteradresse (?:er )?mulig", r"cpr[- ]?(?:registrering|adresse) (?:er )?mulig",
     r"possible to register", r"(?:cpr|address) registration (?:is )?(?:possible|allowed)",
     r"you can register", r"can (?:get|have) (?:a )?cpr",
+    r"cpr (?:can|could) be registered", r"(?:max\.?|maximum|up to) \d+ (?:(?:people|persons) )?cpr",
 ]
 
 # --- Bonus ---------------------------------------------------------------------------
 
 TRAVERSANT = [
-    r"gennemlys", r"lys fra (?:to|begge) sider", r"vinduer (?:til|mod|i|på) begge sider",
+    r"gennemlys", r"gennemgående (?:\d[- ]?værelses|lejlighed|bolig|stue|lys)", r"lys fra (?:to|begge) sider", r"vinduer (?:til|mod|i|på) begge sider",
     r"lys ind fra (?:to|begge) sider", r"dobbelt ?orienter",
     r"light from (?:two|both) sides", r"windows (?:on|to|facing) (?:two|both) sides",
     r"dual[- ]aspect", r"bright from (?:two|both) sides", r"double[- ]aspect",

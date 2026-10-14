@@ -35,6 +35,7 @@ listing:
   avoid_floors: [0, 1]         # rez-de-chaussée et 1er : orange
 
 move_in:
+  enabled: true                # false : la date est affichée mais ne compte pas
   earliest: 2027-01-01         # avant : orange (double loyer)
   latest: 2027-04-01           # après : rouge
 

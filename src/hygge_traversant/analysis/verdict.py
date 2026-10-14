@@ -91,11 +91,14 @@ def analyze(listing: Listing, cfg: Config, facts: Facts | None = None,
 
     # --- Date d'entrée ---------------------------------------------------------------
     d = facts.available_from
-    if d is None:
+    earliest, latest = cfg.move_in_earliest, cfg.move_in_latest
+    if earliest is None and latest is None:
+        pass  # critère désactivé : la date reste affichée mais ne compte pas
+    elif d is None:
         checks.append("date d'entrée")
-    elif d > cfg.move_in_latest:
+    elif latest is not None and d > latest:
         red.append(f"entrée trop tardive ({fmt_date(d)})")
-    elif d < cfg.move_in_earliest:
+    elif earliest is not None and d < earliest:
         orange.append(f"entrée avant la date visée ({fmt_date(d)})")
 
     # --- Bail et domiciliation -----------------------------------------------------------
