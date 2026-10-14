@@ -1,0 +1,10 @@
+Bonjour,
+
+Votre appartement à {area} m'intéresse beaucoup. Je m'appelle Alex, en CDI dans le centre de Copenhague.
+
+Je cherche un logement à partir du [date] pour moi et ma compagne. Nous sommes non-fumeurs et n'avons pas d'animaux.
+
+Je peux fournir contrat de travail, fiches de paie et pièce d'identité, et régler le dépôt de garantie et les loyers d'avance à la signature. Je suis disponible pour une visite très rapidement.
+
+Bien à vous,
+Alex, {phone}

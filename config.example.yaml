@@ -1,0 +1,107 @@
+# Exemple de configuration de hygge_traversant.
+# Copier en config.yaml (ignoré par git) et adapter à votre recherche.
+# Les secrets (canaux ntfy, téléphone, clé API) sont dans .env.
+
+# observe : toutes les notifications partent sur le canal de test (phase de réglage)
+# live    : vertes sur le canal "alertes", oranges sur le canal "silencieux"
+mode: observe
+
+timezone: Europe/Copenhagen
+
+# Pause entre deux passages, tirée au hasard dans cet intervalle (secondes)
+interval_seconds: [120, 240]
+
+# Pause entre deux pages détail d'annonce (secondes)
+detail_delay_seconds: [1.5, 4.0]
+
+sources:
+  boligportal:
+    enabled: true
+    # Recherche(s) BoligPortal, triées par date. Coller l'URL de la recherche
+    # faite sur le site (2+ pièces, 55 m² min, loyer max, tri "nouveautés").
+    search_urls:
+      - "https://www.boligportal.dk/en/rental-apartments/k%C3%B8benhavn/?min_rooms=2&min_size_m2=55&max_monthly_rent=15000"
+
+budget:
+  target_max_total: 15000      # au-dessus : orange
+  absolute_max_total: 16000    # au-dessus : rouge
+  utilities_estimate: 1500     # charges estimées quand l'annonce ne les donne pas
+  suspicious_low_total: 8000   # en dessous pour 55 m² et plus : suspicion d'arnaque
+
+listing:
+  min_size_m2: 55              # en dessous : orange (point ouvert : 50 m² si bien agencé)
+  hard_min_size_m2: 50         # en dessous : rouge
+  min_rooms: 2
+  avoid_floors: [0, 1]         # rez-de-chaussée et 1er : orange
+
+move_in:
+  earliest: 2027-01-01         # avant : orange (double loyer)
+  latest: 2027-04-01           # après : rouge
+
+# Zones par code postal (plages "début-fin" acceptées) et mots-clés du nom.
+zones:
+  priority:
+    - name: Copenhagen S (Ørestad, Amagerbro, Islands Brygge)
+      postal_codes: ["2300"]
+      keywords: ["ørestad", "orestad", "amagerbro", "islands brygge", "københavn s", "copenhagen s"]
+    - name: Vanløse
+      postal_codes: ["2720"]
+      keywords: ["vanløse", "vanlose"]
+  secondary:
+    - name: Valby
+      postal_codes: ["2500"]
+      keywords: ["valby"]
+    - name: Copenhagen NV
+      postal_codes: ["2400"]
+      keywords: ["københavn nv", "copenhagen nv"]
+    - name: Hvidovre
+      postal_codes: ["2650"]
+      keywords: ["hvidovre"]
+    - name: Copenhagen SV
+      postal_codes: ["2450"]
+      keywords: ["københavn sv", "copenhagen sv", "sydhavn"]
+    - name: Kastrup
+      postal_codes: ["2770"]
+      keywords: ["kastrup"]
+  # Point ouvert : à regarder si budget et trajet tiennent (orange)
+  open:
+    - name: Frederiksberg
+      postal_codes: ["2000"]
+      keywords: ["frederiksberg"]
+    - name: Nørrebro (Copenhagen N)
+      postal_codes: ["2200"]
+      keywords: ["nørrebro", "norrebro", "københavn n", "copenhagen n"]
+  excluded:
+    - name: Copenhagen K
+      postal_codes: ["1000-1499"]
+      keywords: ["københavn k", "copenhagen k"]
+    - name: Copenhagen V
+      postal_codes: ["1500-1799"]
+      keywords: ["københavn v", "copenhagen v", "vesterbro"]
+    - name: Frederiksberg C
+      postal_codes: ["1800-1999"]
+      keywords: ["frederiksberg c"]
+    - name: Copenhagen Ø
+      postal_codes: ["2100"]
+      keywords: ["københavn ø", "copenhagen ø", "østerbro"]
+    - name: Nord (Hellerup, Gentofte, Charlottenlund, Holte, Lyngby)
+      postal_codes: ["2800", "2820", "2840", "2900", "2920"]
+      keywords: ["hellerup", "gentofte", "charlottenlund", "holte", "lyngby"]
+
+analysis:
+  engine: keywords             # keywords | llm (plus tard)
+
+notify:
+  send_message: true           # 2e notification avec le message à copier
+  send_orange_message: true    # aussi pour les oranges
+  max_per_run: 10              # garde-fou anti-rafale
+
+recap:
+  enabled: true
+  hour: 21                     # heure locale du récap du soir
+
+health:
+  alert_after_hours: 6         # sans annonce trouvée depuis X heures : alerte
+  alert_after_errors: 5        # erreurs consécutives avant alerte
+
+database: data/hygge.sqlite3
