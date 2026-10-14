@@ -1,18 +1,24 @@
 """Source BoligPortal.
 
-Le téléchargement des pages est en place. Le parsing (parse_search_page,
-parse_listing_page) reste à écrire à partir de vraies pages sauvegardées dans
-tests/fixtures/boligportal/ (commande : hygge save-page <url> <fichier>).
+Les pages (résultats comme annonce) sont rendues côté serveur et embarquent
+toutes leurs données dans un bloc <script id="store" type="application/json"> :
+pas besoin de JavaScript.
 
-Piste probable : BoligPortal est une application web moderne, les données de
-la page sont souvent dans un bloc JSON embarqué (script __NEXT_DATA__ ou
-équivalent). find_embedded_json() aide à le repérer.
+- page de résultats : store.props.page_props.results (triés par date de
+  publication, les plus récentes d'abord). Les similar_ads (autres villes)
+  sont ignorées ;
+- page d'annonce : store.props.page_props.ad, mêmes champs que dans les
+  résultats, plus la description complète.
+
+Pages de référence dans tests/fixtures/boligportal/ (hygge save-page <url> <fichier>).
 """
 
 from __future__ import annotations
 
 import json
 import re
+from dataclasses import fields
+from datetime import date, datetime
 from typing import Any
 
 import httpx
@@ -22,10 +28,6 @@ from ..models import Listing
 from .base import Source, make_client
 
 BASE_URL = "https://www.boligportal.dk"
-
-
-class ParserNotReady(NotImplementedError):
-    pass
 
 
 # --- Aides au parsing --------------------------------------------------------------
@@ -63,18 +65,98 @@ def walk(obj: Any):
             yield from walk(v)
 
 
-def parse_search_page(html: str) -> list[Listing]:
-    raise ParserNotReady(
-        "Parser BoligPortal pas encore écrit : sauvegarder une page de résultats "
-        "avec `hygge save-page` et l'ajouter aux fixtures."
+class ParserError(ValueError):
+    """La page ne contient pas les données attendues (site modifié, page d'erreur...)."""
+
+
+def page_props(html: str) -> dict[str, Any]:
+    """Le JSON embarqué de la page (store.props.page_props)."""
+    script = BeautifulSoup(html, "html.parser").find("script", id="store")
+    if script is None or not script.string:
+        raise ParserError("bloc <script id=\"store\"> absent de la page")
+    try:
+        return json.loads(script.string)["props"]["page_props"]
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        raise ParserError(f"bloc store illisible : {e}") from e
+
+
+def _int(v: Any) -> int | None:
+    return None if v is None else int(round(float(v)))
+
+
+def _date(v: Any) -> date | None:
+    try:
+        return date.fromisoformat(v) if v else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _datetime(v: Any) -> datetime | None:
+    try:
+        return datetime.fromisoformat(v) if v else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _rental_period(months: Any) -> str | None:
+    """BoligPortal donne la durée en mois, 0 pour illimitée."""
+    if months is None:
+        return None
+    return "Unlimited" if int(months) == 0 else f"{int(months)} months"
+
+
+# Champs de l'annonce gardés dans Listing.raw (non stockés en base, utiles au débogage).
+RAW_KEYS = ("state", "rental_period", "features", "other_details", "created",
+            "advertised_date", "location", "energy_rating", "is_owner", "social_housing")
+
+
+def listing_from_ad(ad: dict[str, Any]) -> Listing:
+    features = ad.get("features") or {}
+    street = " ".join(filter(None, [ad.get("street_name"), ad.get("street_number")]))
+    utilities = _int(ad.get("monthly_rent_extra_costs"))
+    return Listing(
+        source="boligportal",
+        source_id=str(ad["id"]),
+        url=BASE_URL + ad["url"],
+        title=ad.get("title") or "",
+        description=ad.get("description") or "",
+        area=ad.get("city_area") or ad.get("city"),
+        postal_code=_int(ad.get("postal_code")),
+        address=street or None,
+        rent=_int(ad.get("monthly_rent")),
+        # 0 = non renseigné le plus souvent : on laisse l'analyse estimer les charges
+        utilities=utilities or None,
+        deposit=_int(ad.get("deposit")),
+        size_m2=ad.get("size_m2"),
+        rooms=_int(ad.get("rooms")),
+        floor=_int(ad.get("floor")),
+        furnished=features.get("furnished"),
+        available_from=_date(ad.get("available_from")),
+        rental_period=_rental_period(ad.get("rental_period")),
+        published_at=_datetime(ad.get("advertised_date")),
+        raw={k: ad.get(k) for k in RAW_KEYS},
     )
+
+
+def parse_search_page(html: str) -> list[Listing]:
+    props = page_props(html)
+    if "results" not in props:
+        raise ParserError("pas de liste de résultats dans la page")
+    return [listing_from_ad(ad) for ad in props["results"] if not ad.get("deleted")]
 
 
 def parse_listing_page(html: str, listing: Listing) -> Listing:
-    raise ParserNotReady(
-        "Parser de page détail BoligPortal pas encore écrit : sauvegarder une page "
-        "d'annonce avec `hygge save-page` et l'ajouter aux fixtures."
-    )
+    """Complète l'annonce de la page de résultats avec sa page détail.
+    Les valeurs de la page détail priment, sauf quand elles sont vides."""
+    ad = page_props(html).get("ad")
+    if not ad:
+        raise ParserError("pas d'annonce dans la page")
+    detail = listing_from_ad(ad)
+    for f in fields(Listing):
+        value = getattr(detail, f.name)
+        if value is None or value == "" or value == {}:
+            setattr(detail, f.name, getattr(listing, f.name))
+    return detail
 
 
 # --- Source --------------------------------------------------------------------------

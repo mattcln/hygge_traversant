@@ -93,7 +93,7 @@ pytest
 
 - [x] Config, base SQLite, analyse par mots-clés, verdicts, messages, notifications ntfy,
       récap, alertes de santé, Docker
-- [ ] Parser BoligPortal (`sources/boligportal.py`) : à écrire à partir de vraies pages
-      dans `tests/fixtures/boligportal/`
+- [x] Parser BoligPortal (`sources/boligportal.py`) : lit le JSON embarqué
+      (`<script id="store">`), testé sur de vraies pages dans `tests/fixtures/boligportal/`
 - [ ] Analyse par LLM (`analysis/llm.py`), si les mots-clés ne suffisent pas
 - [ ] Autres sources (lejebolig.dk)
